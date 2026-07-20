@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { parseAnimeList } from '@/lib/parser'
+import { parseSearchResults } from '@/lib/parser'
 
 const BASE_URL = 'https://www.yinhuadm.xyz'
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     })
 
     const html = await res.text()
-    const list = parseAnimeList(html)
+    const list = parseSearchResults(html)
 
     return NextResponse.json({
       code: 0,

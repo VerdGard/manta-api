@@ -23,7 +23,7 @@ function decodeHtml(str: string): string {
     .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(parseInt(d)))
 }
 
-/** 解析动漫卡片列表 */
+/** 解析首页/分类页的 module-poster-item 卡片列表 */
 export function parseAnimeList(html: string): any[] {
   const list: any[] = []
   const itemRegex = /<a href="\/v\/(\d+)\.html"[^>]*title="([^"]*)"[^>]*class="module-poster-item[^"]*"[^>]*>[\s\S]*?<div class="module-item-note">([^<]*)<\/div>[\s\S]*?<img[^>]*data-original="([^"]*)"[\s\S]*?<div class="module-poster-item-title"[^>]*>([^<]*)<\/div>/g
@@ -40,6 +40,38 @@ export function parseAnimeList(html: string): any[] {
       cover: m[4] || '',
       isNew: isNew,
       url: `${BASE_URL}/v/${m[1]}.html`
+    })
+  }
+  return list
+}
+
+/** 解析搜索页的 module-card-item 卡片列表（搜索结果专用） */
+export function parseSearchResults(html: string): any[] {
+  const list: any[] = []
+  // 匹配搜索结果的卡片
+  const cardRegex = /<div class="module-card-item module-item">[\s\S]*?<a href="\/v\/(\d+)\.html"[\s\S]*?<div class="module-item-note">([^<]*)<\/div>[\s\S]*?<img[^>]*data-original="([^"]+)"[\s\S]*?<div class="module-card-item-title">[\s\S]*?<a href="\/v\/\d+\.html">([^<]*)<\/a>[\s\S]*?<div class="module-info-item-content">([^<]*)<\/div>/g
+
+  let m: RegExpExecArray | null
+  while ((m = cardRegex.exec(html)) !== null) {
+    const id = parseInt(m[1])
+    const episode = m[2]?.trim() || ''
+    const cover = m[3] || ''
+    const title = decodeHtml(m[4]?.trim() || '')
+    const meta = m[5]?.trim() || ''
+
+    // 从 meta 中提取 year 和 area
+    const parts = meta.split('/').map(s => s.trim())
+    const year = parts[0] || ''
+    const area = parts[1] || ''
+
+    list.push({
+      id,
+      title,
+      episode,
+      cover,
+      year,
+      area,
+      url: `${BASE_URL}/v/${id}.html`
     })
   }
   return list
@@ -179,9 +211,15 @@ export function parseDetail(html: string) {
   return detail
 }
 
-/** 分类列表解析 */
+/** 分类列表解析 (与首页卡片格式相同) */
 export function parseCategoryPage(html: string) {
-  return parseAnimeList(html)
+  // 先尝试匹配 poster-item 格式
+  let list = parseAnimeList(html)
+  if (list.length === 0) {
+    // 如果没匹配到，尝试 card-item 格式
+    list = parseSearchResults(html)
+  }
+  return list
 }
 
 /** 播放页解析 */
